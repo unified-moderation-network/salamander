@@ -12,8 +12,8 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-from .cog import Alias
+# from .cog import Alias
 
 
-def setup(bot):
-    bot.add_cog(Alias(bot))
+# def setup(bot):
+#    bot.add_cog(Alias(bot))

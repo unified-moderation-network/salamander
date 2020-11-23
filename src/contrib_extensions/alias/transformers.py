@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import re
 import shlex
-import operator
 from functools import partial
 
 
@@ -27,14 +26,14 @@ class Tracked:
 
     def __getitem__(self, item):
         self._fetched.add(item)
-        return self.args.__getitem__(item)
+        return self._args.__getitem__(item)
 
     @property
     def unfetched(self):
         return tuple(
             (
                 element
-                for index, element in enumerate(self.args)
+                for index, element in enumerate(self._args)
                 if index not in self._fetched
             )
         )
@@ -55,12 +54,17 @@ def create_func_from_spec(spec: str):
     def hard_val(x, args):
         return x
 
+    def get(x, args):
+        return args[x]
+
     transforms = []
 
     for index, a in enumerate(arg_spec):
         if match := patt.match(a):
-            idx = int(match.group(0))
-            transforms.append(partial(operator.getitem, b=idx))
+            idx = int(match.group(1)) - 1
+            if idx < 0:
+                raise ValueError()
+            transforms.append(partial(get, idx))
         elif match := escaped.match(a):
             transforms.append(partial(hard_val, match.group(1)))
         else:
@@ -71,6 +75,10 @@ def create_func_from_spec(spec: str):
         tracker = Tracked(*args)
 
         most = tuple((f(tracker) for f in transforms))
-        return shlex.join((*most, tracker.unfetched))
+
+        def requote(s):
+            return f'"{s}"' if any(c.isspace() for c in s) else s
+
+        return " ".join(requote(s) for s in (*most, *tracker.unfetched))
 
     return transformer
